@@ -38,3 +38,8 @@ This is only an poc and not production ready.
 References:
 
 https://phabricator.wikimedia.org/r/project/mediawiki/extensions/BoilerPlate/
+
+> **Note**
+> this extension right now is using a dedicated account ( from `$wgSummaryToJiraCommentEmail`) to post comments. Hence, the comments will be posted by this account. We decided to use support@wikiteq.com for this purpose. 
+
+
