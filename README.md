@@ -44,7 +44,4 @@ https://phabricator.wikimedia.org/r/project/mediawiki/extensions/BoilerPlate/
 from wikiteq, https://wikiteq.atlassian.net/browse/WIK-1385?focusedCommentId=59113
 
 > **Note**
-> this extension right now is using a dedicated account ( from `$wgSummaryToJiraCommentEmail`) to post comments. Hence, the comments will be posted by this account. We decided to use support@wikiteq.com for this purpose. 
-
-
-
+> this extension right now is using a dedicated account ( from `$wgSummaryToJiraCommentEmail`) to post comments. Hence, the comments will be posted by this account. We decided to use support@wikiteq.com for this purpose.
