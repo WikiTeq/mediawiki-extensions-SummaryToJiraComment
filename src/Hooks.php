@@ -52,11 +52,15 @@ class Hooks {
 			MediaWikiServices::getInstance()->getMainConfig()->get( 'SummaryToJiraCommentToken' ),
 			MediaWikiServices::getInstance()->getMainConfig()->get( 'SummaryToJiraCommentEmail' )
 		];
+		$title = $wikiPage->getTitle();
+		$jiraInstance = $config[0];
 		$issueKeys = self::getJiraIssueKeys( $summary );
 
+		$summary = '';
 		foreach ( $issueKeys as $issueKey ) {
-			$summary .= "\n\n" . $diffLink;
-			$summary = str_replace( $issueKey, sprintf( "`%s`", $issueKey ), $summary );
+			$summary .= "\n" . $title->getFullText();
+			$summary .= "\n" . $diffLink;
+			$summary = str_replace( $issueKey, sprintf( "https://%s/%s", $jiraInstance, $issueKey ), $summary );
 			self::sendToJira( $config, $issueKey, $summary );
 		}
 
@@ -94,7 +98,7 @@ class Hooks {
 		self::$httpClient = new MultiHttpClient( [ 'maxRetries' => 3 ] );
 
 		try {
-			$response = self::$httpClient->run( [
+			self::$httpClient->run( [
 				'headers' => [
 					'Authorization' => 'Basic ' . $hash,
 					'Content-Type' => 'application/json',
