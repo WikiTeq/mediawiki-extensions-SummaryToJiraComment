@@ -53,14 +53,13 @@ class Hooks {
 			MediaWikiServices::getInstance()->getMainConfig()->get( 'SummaryToJiraCommentEmail' )
 		];
 		$title = $wikiPage->getTitle();
-		$jiraInstance = $config[0];
 		$issueKeys = self::getJiraIssueKeys( $summary );
 
 		$summary = '';
 		foreach ( $issueKeys as $issueKey ) {
-			$summary .= "\n" . $title->getFullText();
-			$summary .= "\n" . $diffLink;
-			$summary = str_replace( $issueKey, sprintf( "https://%s/%s", $jiraInstance, $issueKey ), $summary );
+			$summary .= "\nTitle: " . $title->getFullText();
+			$summary .= "\nDiff: " . $diffLink;
+			$summary .= "\nTicket: " . sprintf("[%s]", $issueKey);
 			self::sendToJira( $config, $issueKey, $summary );
 		}
 
@@ -126,9 +125,13 @@ class Hooks {
 		$diffLink = $wikiPage->getTitle()->getFullURL();
 		$currentRevision = $revisionRecord->getId();
 		$oldRevision = $revisionRecord->getParentId();
-		$diffLink .= '?diff=' . $currentRevision . '&oldid=' . $oldRevision;
 
-		return $diffLink;
+		$params = [
+			'diff' => $currentRevision,
+			'oldid' => $oldRevision
+		];
+
+		return wfAppendQuery( $diffLink, $params );
 	}
 
 }
