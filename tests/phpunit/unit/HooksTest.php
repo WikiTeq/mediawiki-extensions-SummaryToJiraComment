@@ -45,4 +45,14 @@ class HooksTest extends \MediaWikiUnitTestCase {
 
 		$this->assertTrue( $result );
 	}
+
+	/**
+	 * @covers ::getJiraIssueKeys
+	 */
+	public function testGetJiraIssueKeys() {
+		$summary = 'TEST-1 Test summary TEST1-1 11-22 test-11';
+		$issueKeys = Hooks::getJiraIssueKeys( $summary );
+
+		$this->assertSame( [ 'TEST-1 ', 'TEST1-1', '11-22', 'test-11' ], $issueKeys );
+	}
 }
