@@ -59,7 +59,7 @@ class Hooks {
 		foreach ( $issueKeys as $issueKey ) {
 			$summary .= "\nTitle: " . $title->getFullText();
 			$summary .= "\nDiff: " . $diffLink;
-			$summary .= "\nTicket: " . sprintf("[%s]", $issueKey);
+			$summary .= "\nTicket: " . sprintf( "[%s]", $issueKey );
 			self::sendToJira( $config, $issueKey, $summary );
 		}
 
@@ -73,7 +73,7 @@ class Hooks {
 	 */
 	private static function getJiraIssueKeys( $summary ): array {
 		$issueKeys = [];
-		$issueKeyRegex = '/([A-Z]+-[0-9]+)/';
+		$issueKeyRegex = '/([A-Z0-9]+-[0-9]+)/';
 		$matches = [];
 		preg_match_all( $issueKeyRegex, $summary, $matches );
 		if ( isset( $matches[1] ) ) {
