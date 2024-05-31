@@ -1,11 +1,10 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
-    branches: ["*"]
-
+  push:
+    branches:
+      - main
 jobs:
   test:
     name: "PHPUnit: MW ${{ matrix.mw }}, PHP ${{ matrix.php }}"
@@ -13,7 +12,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # LTS version 1.39 against PHP 7.4, 8.0, 8.1
           - mw: "REL1_39"
             php: 7.4
           - mw: "REL1_39"
