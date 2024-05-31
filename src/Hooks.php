@@ -26,8 +26,12 @@ use MediaWiki\User\UserIdentity;
 use MultiHttpClient;
 use WikiPage;
 
+
 class Hooks {
 
+	/**
+	 *  HttpClient instance used to send HTTP requests
+	 */
 	public static MultiHttpClient $httpClient;
 
 	/**
