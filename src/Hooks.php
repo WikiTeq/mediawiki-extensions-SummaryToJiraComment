@@ -91,7 +91,7 @@ class Hooks {
 	 * @return bool
 	 */
 	private static function sendToJira( $config, $issueKey, $summary ): bool {
-		list( $instance, $token, $email ) = $config;
+		[ $instance, $token, $email ] = $config;
 		$hash = base64_encode( $email . ':' . $token );
 
 		self::$httpClient = new MultiHttpClient( [ 'maxRetries' => 3 ] );

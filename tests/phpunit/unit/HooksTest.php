@@ -1,6 +1,6 @@
 <?php
 
-namespace MediaWiki\Extension\SummaryToJiraComment\Tests;
+namespace MediaWiki\Extension\SummaryToJiraComment\Test\Unit;
 
 /**
  * @coversDefaultClass \MediaWiki\Extension\SummaryToJiraComment\Hooks
