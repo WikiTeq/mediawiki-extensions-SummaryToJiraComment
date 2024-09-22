@@ -71,9 +71,9 @@ class Hooks {
 	 * @param string $summary
 	 * @return array
 	 */
-	private static function getJiraIssueKeys( $summary ): array {
+	public static function getJiraIssueKeys( $summary ): array {
 		$issueKeys = [];
-		$issueKeyRegex = '/([A-Z0-9]+-[0-9]+)/';
+		$issueKeyRegex = '/\b([A-Z][A-Z0-9]*-[0-9]+)\b/';
 		$matches = [];
 		preg_match_all( $issueKeyRegex, $summary, $matches );
 		if ( isset( $matches[1] ) ) {
@@ -90,8 +90,8 @@ class Hooks {
 	 * @param string $summary
 	 * @return bool
 	 */
-	private static function sendToJira( $config, $issueKey, $summary ): bool {
-		list( $instance, $token, $email ) = $config;
+	public static function sendToJira( $config, $issueKey, $summary ): bool {
+		[ $instance, $token, $email ] = $config;
 		$hash = base64_encode( $email . ':' . $token );
 
 		self::$httpClient = new MultiHttpClient( [ 'maxRetries' => 3 ] );

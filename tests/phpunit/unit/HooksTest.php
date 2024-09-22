@@ -2,35 +2,23 @@
 
 namespace MediaWiki\Extension\SummaryToJiraComment\Tests;
 
+use MediaWiki\MediaWikiServices;
+use MediaWiki\Extension\SummaryToJiraComment\Hooks;
+use MultiHttpClient;
+
 /**
  * @coversDefaultClass \MediaWiki\Extension\SummaryToJiraComment\Hooks
  */
-class HooksTest extends \MediaWikiUnitTestCase {
-
-	/**
-	 * @covers ::onPageSaveComplete
-	 */
-	public function testOnPageSaveComplete() {
-		$wikiPage = $this->createMock( WikiPage::class );
-		$user = $this->createMock( UserIdentity::class );
-		$summary = 'Test summary';
-		$flags = 0;
-
-		$revisionRecord = $this->createMock( RevisionRecord::class );
-		$editResult = $this->createMock( EditResult::class );
-		$result = Hooks::onPageSaveComplete( $wikiPage, $user, $summary, $flags, $revisionRecord, $editResult );
-
-		$this->assertTrue( $result );
-	}
+class HooksUnitTest extends \MediaWikiUnitTestCase {
 
 	/**
 	 * @covers ::sendToJira
 	 */
 	public function testSendToJira() {
 		$config = [
-		   'instance' => 'https://jira.example.com',
-		   'token' => 'token',
-		   'email' => 'test@example.test'
+			'https://jira.example.com',
+			'token',
+			'test@example.com'
 		];
 		$issueKey = 'TEST-1';
 		$summary = 'Test summary';
@@ -50,9 +38,10 @@ class HooksTest extends \MediaWikiUnitTestCase {
 	 * @covers ::getJiraIssueKeys
 	 */
 	public function testGetJiraIssueKeys() {
-		$summary = 'TEST-1 Test summary TEST1-1 11-22 test-11';
+		$summary = 'TEST-1 Test summary TEST1-1 11-22 test-11 R2-D2 C-3PO BB-8 THX 1138 TEST1T2-3  ' .
+		 ' #TEST1-7 A0-3 WW-II EMDASH—1 ENDASH–2 DOUBLEDASH--3 [BRACKET-1] (PAREN-2)';
 		$issueKeys = Hooks::getJiraIssueKeys( $summary );
 
-		$this->assertSame( [ 'TEST-1 ', 'TEST1-1', '11-22', 'test-11' ], $issueKeys );
+		$this->assertSame( [ 'TEST-1', 'TEST1-1', 'BB-8', 'TEST1T2-3', 'TEST1-7', 'A0-3', 'BRACKET-1', 'PAREN-2' ], $issueKeys );
 	}
 }
