@@ -11,6 +11,81 @@ env:
   MW_INSTALL_PATH: ${{ github.workspace }}
 
 jobs:
+  style:
+    name: Code Style
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: [ '8.1' ]
+        # Not running against master due to T358956
+        mediawiki: [ REL1_39, REL1_41 ]
+    steps:
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, intl
+          coverage: none
+          tools: composer, phpcs, phplint
+      - name: Setup MediaWiki
+        uses: actions/checkout@v3
+        with:
+          repository: wikimedia/mediawiki
+          ref: ${{ matrix.mediawiki }}
+      - name: Setup Extension
+        uses: actions/checkout@v3
+        with:
+          path: extensions/${{ env.EXTNAME }}
+      - name: Setup Composer
+        run: |
+          echo '{"extra":{"merge-plugin":{"include":["extensions/*/composer.json","skins/*/composer.json"]}}}' > composer.local.json
+          composer update
+          composer update
+      - name: Lint
+        run: phplint -w extensions/${{ env.EXTNAME }}
+      - name: PHP Code Sniffer
+        run: phpcs -sp --standard=vendor/mediawiki/mediawiki-codesniffer/MediaWiki extensions/${{ env.EXTNAME }}
+
+  security:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: [ '7.4', '8.1' ]
+        mediawiki: [ REL1_39, REL1_41, master ]
+    steps:
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, intl, ast
+          coverage: none
+          tools: composer
+      - name: Setup MediaWiki
+        uses: actions/checkout@v3
+        with:
+          repository: wikimedia/mediawiki
+          ref: ${{ matrix.mediawiki }}
+      - name: Setup Extension
+        uses: actions/checkout@v3
+        with:
+          path: extensions/${{ env.EXTNAME }}
+      - name: Setup PluggableAuth dependency
+        uses: actions/checkout@v3
+        with:
+          path: extensions/PluggableAuth
+          repository: wikimedia/mediawiki-extensions-PluggableAuth
+          ref: 7.0.0
+      - name: Setup Composer
+        run: |
+          echo '{"extra":{"merge-plugin":{"include":["extensions/*/composer.json","skins/*/composer.json"]}}}' > composer.local.json
+          composer update
+          composer update
+      - name: Phan
+        run: ./vendor/bin/phan -d extensions/${{ env.EXTNAME }} --minimum-target-php-version=7.4 --long-progress-bar
+
   test:
     name: PHPUnit
     runs-on: ubuntu-latest

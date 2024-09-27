@@ -28,6 +28,9 @@ use WikiPage;
 
 class Hooks {
 
+	/**
+	 * @var MultiHttpClient
+	 */
 	public static MultiHttpClient $httpClient;
 
 	/**

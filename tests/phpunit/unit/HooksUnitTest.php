@@ -2,7 +2,6 @@
 
 namespace MediaWiki\Extension\SummaryToJiraComment\Tests;
 
-use MediaWiki\MediaWikiServices;
 use MediaWiki\Extension\SummaryToJiraComment\Hooks;
 use MultiHttpClient;
 
@@ -42,6 +41,9 @@ class HooksUnitTest extends \MediaWikiUnitTestCase {
 		 ' #TEST1-7 A0-3 WW-II EMDASH—1 ENDASH–2 DOUBLEDASH--3 [BRACKET-1] (PAREN-2)';
 		$issueKeys = Hooks::getJiraIssueKeys( $summary );
 
-		$this->assertSame( [ 'TEST-1', 'TEST1-1', 'BB-8', 'TEST1T2-3', 'TEST1-7', 'A0-3', 'BRACKET-1', 'PAREN-2' ], $issueKeys );
+		$this->assertSame(
+			[ 'TEST-1', 'TEST1-1', 'BB-8', 'TEST1T2-3', 'TEST1-7', 'A0-3', 'BRACKET-1', 'PAREN-2' ],
+			$issueKeys
+		);
 	}
 }

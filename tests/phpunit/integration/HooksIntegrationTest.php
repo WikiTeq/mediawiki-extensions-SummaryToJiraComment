@@ -2,19 +2,19 @@
 
 namespace MediaWiki\Extension\SummaryToJiraComment\Tests;
 
-use MediaWiki\MediaWikiServices;
 use MediaWiki\Extension\SummaryToJiraComment\Hooks;
-use WikiPage;
+use MediaWiki\MediaWikiServices;
 use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Storage\EditResult;
 use User;
+use WikiPage;
 
 /**
  * @coversDefaultClass \MediaWiki\Extension\SummaryToJiraComment\Hooks
  */
 class HooksIntegrationTest extends \MediaWikiIntegrationTestCase {
 
-	protected function setUp() : void {
+	protected function setUp(): void {
 		parent::setUp();
 		$this->overrideConfigValue( 'SummaryToJiraCommentInstance', 'jira.example.com' );
 		$this->overrideConfigValue( 'SummaryToJiraCommentToken', '0xCAFEBEEF' );
@@ -28,7 +28,7 @@ class HooksIntegrationTest extends \MediaWikiIntegrationTestCase {
 		$titleFactory = MediaWikiServices::getInstance()->getTitleFactory();
 		$wikiPage = $this->createConfiguredMock( WikiPage::class,
 			// We need a real title for getting a diff link
-			[ 'getTitle' => $titleFactory->newFromText('Test page') ]
+			[ 'getTitle' => $titleFactory->newFromText( 'Test page' ) ]
 		);
 		$user = $this->createMock( User::class );
 		$summary = 'Test summary';
