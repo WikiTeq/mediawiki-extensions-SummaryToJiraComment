@@ -53,7 +53,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: [ '7.4', '8.1' ]
+        php: [ '8.1' ]
         mediawiki: [ REL1_39, REL1_41, master ]
     steps:
       - name: Setup PHP
@@ -72,12 +72,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           path: extensions/${{ env.EXTNAME }}
-      - name: Setup PluggableAuth dependency
-        uses: actions/checkout@v3
-        with:
-          path: extensions/PluggableAuth
-          repository: wikimedia/mediawiki-extensions-PluggableAuth
-          ref: 7.0.0
       - name: Setup Composer
         run: |
           echo '{"extra":{"merge-plugin":{"include":["extensions/*/composer.json","skins/*/composer.json"]}}}' > composer.local.json
