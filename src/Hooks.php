@@ -57,12 +57,13 @@ class Hooks {
 		];
 		$title = $wikiPage->getTitle();
 		$issueKeys = self::getJiraIssueKeys( $summary );
+		$author = $user->getName();
 
 		$summary = '';
 		foreach ( $issueKeys as $issueKey ) {
 			$summary .= "\nTitle: " . $title->getFullText();
 			$summary .= "\nDiff: " . $diffLink;
-			$summary .= "\nTicket: " . sprintf( "[%s]", $issueKey );
+			$summary .= "\nAuthor: " . $author;
 			self::sendToJira( $config, $issueKey, $summary );
 		}
 
