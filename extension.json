@@ -37,17 +37,5 @@
 			"i18n"
 		]
 	},
-	"ResourceModules": {
-		"ext.summaryToJiraComment": {
-			"localBasePath": "resources/ext.summaryToJiraComment",
-			"remoteExtPath": "SummaryToJiraComment/resources/ext.summaryToJiraComment",
-			"dependencies": [],
-			"styles": [],
-			"packageFiles": [
-				"init.js"
-			],
-			"messages": []
-		}
-	},
 	"manifest_version": 2
 }
