@@ -8,7 +8,7 @@
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
 	"requires": {
-		"MediaWiki": ">= 1.35.0"
+		"MediaWiki": ">= 1.39.0"
 	},
 	"AutoloadNamespaces": {
 		"MediaWiki\\Extension\\SummaryToJiraComment\\": "src/"
@@ -36,18 +36,6 @@
 		"SummaryToJiraComment": [
 			"i18n"
 		]
-	},
-	"ResourceModules": {
-		"ext.summaryToJiraComment": {
-			"localBasePath": "resources/ext.summaryToJiraComment",
-			"remoteExtPath": "SummaryToJiraComment/resources/ext.summaryToJiraComment",
-			"dependencies": [],
-			"styles": [],
-			"packageFiles": [
-				"init.js"
-			],
-			"messages": []
-		}
 	},
 	"manifest_version": 2
 }
