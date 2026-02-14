@@ -49,22 +49,24 @@ class Hooks {
 		int $flags,
 		RevisionRecord $revisionRecord,
 		EditResult $editResult ): bool {
+		$title = $wikiPage->getTitle();
+		if ( !$title ) {
+			return true;
+		}
 		$diffLink = self::getDiffLink( $wikiPage, $revisionRecord );
 		$config = [
 			MediaWikiServices::getInstance()->getMainConfig()->get( 'SummaryToJiraCommentInstance' ),
 			MediaWikiServices::getInstance()->getMainConfig()->get( 'SummaryToJiraCommentToken' ),
 			MediaWikiServices::getInstance()->getMainConfig()->get( 'SummaryToJiraCommentEmail' )
 		];
-		$title = $wikiPage->getTitle();
 		$issueKeys = self::getJiraIssueKeys( $summary );
 		$author = $user->getName();
 
-		$summary = '';
+		$commentBody = "\nTitle: " . $title->getFullText() .
+			"\nDiff: " . $diffLink .
+			"\nAuthor: " . $author;
 		foreach ( $issueKeys as $issueKey ) {
-			$summary .= "\nTitle: " . $title->getFullText();
-			$summary .= "\nDiff: " . $diffLink;
-			$summary .= "\nAuthor: " . $author;
-			self::sendToJira( $config, $issueKey, $summary );
+			self::sendToJira( $config, $issueKey, $commentBody );
 		}
 
 		return true;
@@ -126,7 +128,11 @@ class Hooks {
 	 * @return string
 	 */
 	private static function getDiffLink( WikiPage $wikiPage, RevisionRecord $revisionRecord ): string {
-		$diffLink = $wikiPage->getTitle()->getFullURL();
+		$title = $wikiPage->getTitle();
+		if ( !$title ) {
+			return '';
+		}
+		$diffLink = $title->getFullURL();
 		$currentRevision = $revisionRecord->getId();
 		$oldRevision = $revisionRecord->getParentId();
 
