@@ -1,0 +1,9 @@
+{
+	"@metadata": {
+		"authors": [
+			"Daniel Scherzer",
+			"WikiTeq"
+		]
+	},
+	"summarytojiracomment-desc": "{{desc|name=SummaryToJiraComment}}"
+}

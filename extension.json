@@ -1,7 +1,8 @@
 {
 	"name": "SummaryToJiraComment",
 	"author": [
-		"Ashley Solomon"
+		"Ashley Solomon",
+		"WikiTeq"
 	],
 	"url": "https://www.mediawiki.org/wiki/Extension:SummaryToJiraComment",
 	"descriptionmsg": "summarytojiracomment-desc",

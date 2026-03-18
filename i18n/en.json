@@ -1,7 +1,8 @@
 {
 	"@metadata": {
 		"authors": [
-			"Ashley Solomon"
+			"Ashley Solomon",
+			"WikiTeq"
 		]
 	},
 	"summarytojiracomment-desc": "Adds comment to JIRA ticket"

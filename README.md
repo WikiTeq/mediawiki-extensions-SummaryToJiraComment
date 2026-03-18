@@ -1,6 +1,7 @@
-# Send Page Summary to Jira Comment
+# SummaryToJiraComment
 
-This extension sends the page summary to a Jira comment.
+This extension comments on Jira tasks when they are mentioned in an edit
+summary, adding a link to the relevant edit on your wiki.
 
 ## Set up 
 
@@ -16,7 +17,7 @@ Prerequisite:
    
 	```bash
 	cd extensions
-	git clone https://github.com/ashcslmn/summary-to-jira-comment.git SummaryToJiraComment
+	git clone https://github.com/WikiTeq/mediawiki-extensions-SummaryToJiraComment SummaryToJiraComment
 	```
 
 4. Add the following to your LocalSettings.php
@@ -27,14 +28,3 @@ Prerequisite:
 	$wgSummaryToJiraCommentToken = '<your token>';
 	$wgSummaryToJiraCommentEmail = '<your email>';
 	```
-	
-## Demo
-
-https://www.loom.com/share/0b5675bbc56c49a8be819d45546d3eff
-
-## NOTE:
-This is only an poc and not production ready.
-
-References:
-
-https://phabricator.wikimedia.org/r/project/mediawiki/extensions/BoilerPlate/
