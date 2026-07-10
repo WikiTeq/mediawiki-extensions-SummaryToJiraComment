@@ -29,9 +29,9 @@ use WikiPage;
 class Hooks {
 
 	/**
-	 * @var MultiHttpClient
+	 * @var MultiHttpClient|null
 	 */
-	public static MultiHttpClient $httpClient;
+	public static ?MultiHttpClient $httpClient = null;
 
 	/**
 	 * @param WikiPage $wikiPage
@@ -50,6 +50,8 @@ class Hooks {
 		RevisionRecord $revisionRecord,
 		EditResult $editResult ): bool {
 		$title = $wikiPage->getTitle();
+		// Defense-in-depth: WikiPage::getTitle() is non-null on supported MW versions.
+		// @phan-suppress-next-line PhanRedundantCondition
 		if ( !$title ) {
 			return true;
 		}
@@ -100,7 +102,7 @@ class Hooks {
 		[ $instance, $token, $email ] = $config;
 		$hash = base64_encode( $email . ':' . $token );
 
-		self::$httpClient = new MultiHttpClient( [ 'maxRetries' => 3 ] );
+		self::$httpClient ??= new MultiHttpClient( [ 'maxRetries' => 3 ] );
 
 		try {
 			self::$httpClient->run( [
@@ -129,6 +131,8 @@ class Hooks {
 	 */
 	private static function getDiffLink( WikiPage $wikiPage, RevisionRecord $revisionRecord ): string {
 		$title = $wikiPage->getTitle();
+		// Defense-in-depth: WikiPage::getTitle() is non-null on supported MW versions.
+		// @phan-suppress-next-line PhanRedundantCondition
 		if ( !$title ) {
 			return '';
 		}

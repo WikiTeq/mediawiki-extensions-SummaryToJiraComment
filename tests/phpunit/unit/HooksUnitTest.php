@@ -10,6 +10,11 @@ use MultiHttpClient;
  */
 class HooksUnitTest extends \MediaWikiUnitTestCase {
 
+	protected function tearDown(): void {
+		Hooks::$httpClient = null;
+		parent::tearDown();
+	}
+
 	/**
 	 * @covers ::sendToJira
 	 */
