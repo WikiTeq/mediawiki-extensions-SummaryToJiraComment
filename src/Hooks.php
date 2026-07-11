@@ -28,6 +28,10 @@ use WikiPage;
 
 class Hooks {
 
+	private const SD_STATUS_SD = 'sd';
+	private const SD_STATUS_NOT_SD = 'not_sd';
+	private const SD_STATUS_UNKNOWN = 'unknown';
+
 	/**
 	 * @var MultiHttpClient
 	 */
@@ -64,7 +68,16 @@ class Hooks {
 			$summary .= "\nTitle: " . $title->getFullText();
 			$summary .= "\nDiff: " . $diffLink;
 			$summary .= "\nAuthor: " . $author;
-			self::sendToJira( $config, $issueKey, $summary );
+
+			$status = self::getServiceDeskStatus( $config, $issueKey );
+			if ( self::SD_STATUS_SD === $status ) {
+				self::sendInternalCommentToJira( $config, $issueKey, $summary );
+			} elseif ( self::SD_STATUS_NOT_SD === $status ) {
+				self::sendToJira( $config, $issueKey, $summary );
+			}
+			// SD_STATUS_UNKNOWN: skip posting entirely, never fall back to a
+			// public comment when we can't confirm the issue isn't a Service
+			// Desk request.
 		}
 
 		return true;
@@ -88,7 +101,64 @@ class Hooks {
 	}
 
 	/**
-	 * Send the comment to Jira using the Jira API
+	 * Lazily construct the shared HTTP client, reusing any client already
+	 * assigned (e.g. a mock injected by tests) instead of overwriting it.
+	 * Phan doesn't model the "uninitialized typed static property" state, so
+	 * it considers the isset() check below always-true; it's correct PHP
+	 * regardless, and is what lets tests inject a mock via
+	 * Hooks::$httpClient before the first real call.
+	 * @return MultiHttpClient
+	 */
+	private static function getHttpClient(): MultiHttpClient {
+		// @phan-suppress-next-line PhanRedundantCondition
+		if ( !isset( self::$httpClient ) ) {
+			self::$httpClient = new MultiHttpClient( [ 'maxRetries' => 3 ] );
+		}
+
+		return self::$httpClient;
+	}
+
+	/**
+	 * Determine whether a Jira issue belongs to a Service Desk project.
+	 * Returns SD_STATUS_UNKNOWN (rather than SD_STATUS_NOT_SD) on any
+	 * failure to detect the project type, since defaulting to "not SD" would
+	 * risk posting a public comment on what may actually be a Service Desk
+	 * request.
+	 * @param array $config
+	 * @param string $issueKey
+	 * @return string one of SD_STATUS_SD, SD_STATUS_NOT_SD, SD_STATUS_UNKNOWN
+	 */
+	private static function getServiceDeskStatus( $config, $issueKey ): string {
+		[ $instance, $token, $email ] = $config;
+		$hash = base64_encode( $email . ':' . $token );
+
+		try {
+			$response = self::getHttpClient()->run( [
+				'headers' => [
+					'Authorization' => 'Basic ' . $hash,
+				],
+				'url' => 'https://' . $instance . '/rest/api/2/issue/' . $issueKey . '?fields=project',
+				'method' => 'GET',
+			] );
+		} catch ( \Exception $e ) {
+			return self::SD_STATUS_UNKNOWN;
+		}
+
+		if ( ( $response['code'] ?? 0 ) < 200 || ( $response['code'] ?? 0 ) >= 300 ) {
+			return self::SD_STATUS_UNKNOWN;
+		}
+
+		$body = json_decode( $response['body'] ?? '', true );
+		$projectTypeKey = $body['fields']['project']['projectTypeKey'] ?? null;
+		if ( $projectTypeKey === null ) {
+			return self::SD_STATUS_UNKNOWN;
+		}
+
+		return $projectTypeKey === 'service_desk' ? self::SD_STATUS_SD : self::SD_STATUS_NOT_SD;
+	}
+
+	/**
+	 * Send the comment to Jira using the standard Jira API (public comment)
 	 * @param array $config
 	 * @param string $issueKey
 	 * @param string $summary
@@ -98,10 +168,8 @@ class Hooks {
 		[ $instance, $token, $email ] = $config;
 		$hash = base64_encode( $email . ':' . $token );
 
-		self::$httpClient = new MultiHttpClient( [ 'maxRetries' => 3 ] );
-
 		try {
-			self::$httpClient->run( [
+			$response = self::getHttpClient()->run( [
 				'headers' => [
 					'Authorization' => 'Basic ' . $hash,
 					'Content-Type' => 'application/json',
@@ -116,7 +184,40 @@ class Hooks {
 			return false;
 		}
 
-		return true;
+		return ( $response['code'] ?? 0 ) >= 200 && ( $response['code'] ?? 0 ) < 300;
+	}
+
+	/**
+	 * Send an internal-only comment to a Service Desk issue via the Jira
+	 * Service Management (JSM) request API. Never falls back to a public
+	 * comment on failure.
+	 * @param array $config
+	 * @param string $issueKey
+	 * @param string $summary
+	 * @return bool
+	 */
+	public static function sendInternalCommentToJira( $config, $issueKey, $summary ): bool {
+		[ $instance, $token, $email ] = $config;
+		$hash = base64_encode( $email . ':' . $token );
+
+		try {
+			$response = self::getHttpClient()->run( [
+				'headers' => [
+					'Authorization' => 'Basic ' . $hash,
+					'Content-Type' => 'application/json',
+				],
+				'url' => 'https://' . $instance . '/rest/servicedeskapi/request/' . $issueKey . '/comment',
+				'method' => 'POST',
+				'body' => json_encode( [
+					'body' => $summary,
+					'public' => false,
+				] )
+			] );
+		} catch ( \Exception $e ) {
+			return false;
+		}
+
+		return ( $response['code'] ?? 0 ) >= 200 && ( $response['code'] ?? 0 ) < 300;
 	}
 
 	/**
