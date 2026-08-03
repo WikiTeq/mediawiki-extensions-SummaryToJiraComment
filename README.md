@@ -36,3 +36,12 @@ Prerequisite:
 	$wgSummaryToJiraCommentToken = '<your token>';
 	$wgSummaryToJiraCommentEmail = '<your email>';
 	```
+
+---
+
+## Trademark disclaimer
+
+- **MediaWiki** is a trademark of the Wikimedia Foundation.
+- **Jira** is a registered trademark of Atlassian.
+
+This project is an independent open-source tool and is not affiliated with, sponsored by, or endorsed by Atlassian or the Wikimedia Foundation.
