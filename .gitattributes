@@ -1,2 +1,5 @@
 # Things are mostly text
 * text eol=lf
+*.jpg binary
+*.jpeg binary
+*.png binary
