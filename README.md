@@ -1,3 +1,11 @@
+<p align="center">
+  <img
+    src="assets/banner.jpg"
+    alt="SummaryToJiraComment — a scholarly Cuban tree frog clerk at a desk with a MediaWiki folio, diff-link parchment, and Jira comment press, framed with WikiTeq, MediaWiki, and Jira logos and a SummaryToJiraComment title plaque"
+    width="100%"
+  >
+</p>
+
 # SummaryToJiraComment
 
 This extension comments on Jira tasks when they are mentioned in an edit
