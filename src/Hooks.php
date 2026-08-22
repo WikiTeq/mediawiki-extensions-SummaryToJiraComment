@@ -55,6 +55,9 @@ class Hooks {
 			MediaWikiServices::getInstance()->getMainConfig()->get( 'SummaryToJiraCommentToken' ),
 			MediaWikiServices::getInstance()->getMainConfig()->get( 'SummaryToJiraCommentEmail' )
 		];
+		if ( !self::isConfigured( $config ) ) {
+			return true;
+		}
 		$title = $wikiPage->getTitle();
 		$issueKeys = self::getJiraIssueKeys( $summary );
 		$author = $user->getName();
@@ -85,6 +88,30 @@ class Hooks {
 		}
 
 		return $issueKeys;
+	}
+
+	/**
+	 * Check whether real Jira credentials have been configured.
+	 *
+	 * The shipped defaults in extension.json are placeholders; without this
+	 * guard, every edit mentioning a Jira key sends wiki metadata to
+	 * https://jira.atlassian.com with empty credentials.
+	 *
+	 * @param array $config [ instance, token, email ]
+	 * @return bool
+	 */
+	public static function isConfigured( array $config ): bool {
+		[ $instance, $token, $email ] = $config;
+
+		if ( $token === '' || $token === null || !is_string( $instance ) ||
+			$instance === '' || $instance === 'jira.atlassian.com' ||
+			$email === '' || $email === null || $email === 'example@atlassian.com' ) {
+			wfDebugLog( 'SummaryToJiraComment', __METHOD__ .
+				': extension is not configured, skipping Jira comment' );
+			return false;
+		}
+
+		return true;
 	}
 
 	/**

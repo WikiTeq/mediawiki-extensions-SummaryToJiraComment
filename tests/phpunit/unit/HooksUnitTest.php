@@ -6,6 +6,14 @@ use MediaWiki\Extension\SummaryToJiraComment\Hooks;
 use MultiHttpClient;
 
 /**
+ * wfDebugLog() is a MediaWiki core global that is not loaded under
+ * MediaWikiUnitTestCase; provide a namespace-local stub so production code
+ * calling it remains testable.
+ */
+function wfDebugLog( $logGroup, $text, $dest = 'all', array $context = [] ) {
+}
+
+/**
  * @coversDefaultClass \MediaWiki\Extension\SummaryToJiraComment\Hooks
  */
 class HooksUnitTest extends \MediaWikiUnitTestCase {
@@ -31,6 +39,37 @@ class HooksUnitTest extends \MediaWikiUnitTestCase {
 		$result = Hooks::sendToJira( $config, $issueKey, $summary );
 
 		$this->assertTrue( $result );
+	}
+
+	/**
+	 * @dataProvider provideIsConfigured
+	 * @covers ::isConfigured
+	 */
+	public function testIsConfigured( array $config, bool $expected ) {
+		$this->assertSame( $expected, Hooks::isConfigured( $config ) );
+	}
+
+	public static function provideIsConfigured(): array {
+		return [
+			'shipped placeholder defaults' => [
+				[ 'jira.atlassian.com', '', 'example@atlassian.com' ],
+				false
+			],
+			'default instance with real token and email' => [
+				[ 'jira.atlassian.com', 'token', 'user@example.com' ],
+				false
+			],
+			'default email' => [
+				[ 'jira.example.com', 'token', 'example@atlassian.com' ],
+				false
+			],
+			'empty instance' => [ [ '', 'token', 'user@example.com' ], false ],
+			'empty token' => [ [ 'jira.example.com', '', 'user@example.com' ], false ],
+			'real configuration' => [
+				[ 'jira.example.com', 'token', 'user@example.com' ],
+				true
+			],
+		];
 	}
 
 	/**
