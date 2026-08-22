@@ -6,6 +6,14 @@ use MediaWiki\Extension\SummaryToJiraComment\Hooks;
 use MultiHttpClient;
 
 /**
+ * wfDebugLog() is a MediaWiki core global that is not loaded under
+ * MediaWikiUnitTestCase; provide a namespace-local stub so production code
+ * calling it remains testable.
+ */
+function wfDebugLog( $logGroup, $text, $dest = 'all', array $context = [] ) {
+}
+
+/**
  * @coversDefaultClass \MediaWiki\Extension\SummaryToJiraComment\Hooks
  */
 class HooksUnitTest extends \MediaWikiUnitTestCase {
