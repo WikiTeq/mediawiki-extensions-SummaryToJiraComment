@@ -34,6 +34,37 @@ class HooksUnitTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
+	 * @dataProvider provideFailedResponses
+	 * @covers ::sendToJira
+	 */
+	public function testSendToJiraFailure( array $response ) {
+		$config = [
+			'https://jira.example.com',
+			'token',
+			'test@example.com'
+		];
+
+		$httpClient = $this->createMock( MultiHttpClient::class );
+		$httpClient->method( 'run' )->willReturn( $response );
+
+		Hooks::$httpClient = $httpClient;
+		$result = Hooks::sendToJira( $config, 'TEST-1', 'Test summary' );
+
+		$this->assertFalse( $result );
+	}
+
+	public static function provideFailedResponses(): array {
+		return [
+			'unauthorized' => [ [ 'code' => 401, 'error' => 'Unauthorized' ] ],
+			'server error' => [ [ 'code' => 500, 'error' => 'Internal Server Error' ] ],
+			// MultiHttpClient uses code 0 for transport-level failures (DNS,
+			// timeouts, ...) and never throws for HTTP errors.
+			'transport failure' => [ [ 'code' => 0, 'error' => '(curl error: 6)' ] ],
+			'missing code' => [ [ 'error' => '(curl error: no status set)' ] ],
+		];
+	}
+
+	/**
 	 * @covers ::getJiraIssueKeys
 	 */
 	public function testGetJiraIssueKeys() {
