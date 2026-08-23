@@ -119,6 +119,41 @@ class Hooks {
 	}
 
 	/**
+	 * Build the HTTP Basic auth header value from the configured email/token.
+	 * @param array $config
+	 * @return string
+	 */
+	private static function getAuthHash( $config ): string {
+		[ , $token, $email ] = $config;
+		return base64_encode( $email . ':' . $token );
+	}
+
+	/**
+	 * POST a JSON-encoded comment body to a Jira REST endpoint.
+	 * @param string $url
+	 * @param string $hash
+	 * @param array $body
+	 * @return bool
+	 */
+	private static function postComment( string $url, string $hash, array $body ): bool {
+		try {
+			$response = self::getHttpClient()->run( [
+				'headers' => [
+					'Authorization' => 'Basic ' . $hash,
+					'Content-Type' => 'application/json',
+				],
+				'url' => $url,
+				'method' => 'POST',
+				'body' => json_encode( $body )
+			] );
+		} catch ( \Exception $e ) {
+			return false;
+		}
+
+		return ( $response['code'] ?? 0 ) >= 200 && ( $response['code'] ?? 0 ) < 300;
+	}
+
+	/**
 	 * Determine whether a Jira issue belongs to a Service Desk project.
 	 * Returns SD_STATUS_UNKNOWN (rather than SD_STATUS_NOT_SD) on any
 	 * failure to detect the project type, since defaulting to "not SD" would
@@ -129,8 +164,8 @@ class Hooks {
 	 * @return string one of SD_STATUS_SD, SD_STATUS_NOT_SD, SD_STATUS_UNKNOWN
 	 */
 	private static function getServiceDeskStatus( $config, $issueKey ): string {
-		[ $instance, $token, $email ] = $config;
-		$hash = base64_encode( $email . ':' . $token );
+		[ $instance ] = $config;
+		$hash = self::getAuthHash( $config );
 
 		try {
 			$response = self::getHttpClient()->run( [
@@ -165,26 +200,11 @@ class Hooks {
 	 * @return bool
 	 */
 	public static function sendToJira( $config, $issueKey, $summary ): bool {
-		[ $instance, $token, $email ] = $config;
-		$hash = base64_encode( $email . ':' . $token );
+		[ $instance ] = $config;
+		$hash = self::getAuthHash( $config );
+		$url = 'https://' . $instance . '/rest/api/2/issue/' . $issueKey . '/comment';
 
-		try {
-			$response = self::getHttpClient()->run( [
-				'headers' => [
-					'Authorization' => 'Basic ' . $hash,
-					'Content-Type' => 'application/json',
-				],
-				'url' => 'https://' . $instance . '/rest/api/2/issue/' . $issueKey . '/comment',
-				'method' => 'POST',
-				'body' => json_encode( [
-					'body' => $summary
-				] )
-			] );
-		} catch ( \Exception $e ) {
-			return false;
-		}
-
-		return ( $response['code'] ?? 0 ) >= 200 && ( $response['code'] ?? 0 ) < 300;
+		return self::postComment( $url, $hash, [ 'body' => $summary ] );
 	}
 
 	/**
@@ -197,27 +217,14 @@ class Hooks {
 	 * @return bool
 	 */
 	public static function sendInternalCommentToJira( $config, $issueKey, $summary ): bool {
-		[ $instance, $token, $email ] = $config;
-		$hash = base64_encode( $email . ':' . $token );
+		[ $instance ] = $config;
+		$hash = self::getAuthHash( $config );
+		$url = 'https://' . $instance . '/rest/servicedeskapi/request/' . $issueKey . '/comment';
 
-		try {
-			$response = self::getHttpClient()->run( [
-				'headers' => [
-					'Authorization' => 'Basic ' . $hash,
-					'Content-Type' => 'application/json',
-				],
-				'url' => 'https://' . $instance . '/rest/servicedeskapi/request/' . $issueKey . '/comment',
-				'method' => 'POST',
-				'body' => json_encode( [
-					'body' => $summary,
-					'public' => false,
-				] )
-			] );
-		} catch ( \Exception $e ) {
-			return false;
-		}
-
-		return ( $response['code'] ?? 0 ) >= 200 && ( $response['code'] ?? 0 ) < 300;
+		return self::postComment( $url, $hash, [
+			'body' => $summary,
+			'public' => false,
+		] );
 	}
 
 	/**
