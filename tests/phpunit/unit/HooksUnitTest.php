@@ -10,15 +10,37 @@ use MultiHttpClient;
  */
 class HooksUnitTest extends \MediaWikiUnitTestCase {
 
+	// Per README.md, $wgSummaryToJiraCommentInstance is documented as a bare
+	// hostname (e.g. "<instance>.atlassian.net") — Hooks always prepends
+	// "https://" itself. Using a bare hostname here (unlike the pre-existing
+	// testSendToJira fixture, which uses a full URL and never asserts the
+	// constructed request URL) so the new tests below can assert exact URLs
+	// without tripping over a doubled "https://https://".
+	private const CONFIG = [
+		'jira.example.com',
+		'token',
+		'test@example.com'
+	];
+
+	/**
+	 * @covers ::getHttpClient
+	 */
+	public function testGetHttpClientReusesInjectedMock() {
+		$httpClient = $this->createMock( MultiHttpClient::class );
+		$httpClient->expects( $this->once() )->method( 'run' )
+			->willReturn( [ 'code' => 201, 'body' => '{}' ] );
+
+		Hooks::$httpClient = $httpClient;
+		// If getHttpClient() overwrote the mock, this call would hit the
+		// network instead of the mock and the expects(once) assertion above
+		// would fail.
+		Hooks::sendToJira( self::CONFIG, 'TEST-1', 'Test summary' );
+	}
+
 	/**
 	 * @covers ::sendToJira
 	 */
 	public function testSendToJira() {
-		$config = [
-			'https://jira.example.com',
-			'token',
-			'test@example.com'
-		];
 		$issueKey = 'TEST-1';
 		$summary = 'Test summary';
 
@@ -28,9 +50,71 @@ class HooksUnitTest extends \MediaWikiUnitTestCase {
 		$httpClient->method( 'run' )->willReturn( $response );
 
 		Hooks::$httpClient = $httpClient;
-		$result = Hooks::sendToJira( $config, $issueKey, $summary );
+		$result = Hooks::sendToJira( self::CONFIG, $issueKey, $summary );
 
 		$this->assertTrue( $result );
+	}
+
+	/**
+	 * @covers ::sendToJira
+	 */
+	public function testSendToJiraReturnsFalseOnHttpError() {
+		$httpClient = $this->createMock( MultiHttpClient::class );
+		$httpClient->method( 'run' )->willReturn( [ 'code' => 500, 'body' => '' ] );
+
+		Hooks::$httpClient = $httpClient;
+		$result = Hooks::sendToJira( self::CONFIG, 'TEST-1', 'Test summary' );
+
+		$this->assertFalse( $result );
+	}
+
+	/**
+	 * @covers ::sendToJira
+	 */
+	public function testSendToJiraReturnsFalseOnThrownException() {
+		$httpClient = $this->createMock( MultiHttpClient::class );
+		$httpClient->method( 'run' )->willThrowException( new \RuntimeException( 'network error' ) );
+
+		Hooks::$httpClient = $httpClient;
+		$result = Hooks::sendToJira( self::CONFIG, 'TEST-1', 'Test summary' );
+
+		$this->assertFalse( $result );
+	}
+
+	/**
+	 * @covers ::sendInternalCommentToJira
+	 */
+	public function testSendInternalCommentToJira() {
+		$issueKey = 'SD-1';
+		$summary = 'Test summary';
+
+		$httpClient = $this->createMock( MultiHttpClient::class );
+		$httpClient->expects( $this->once() )->method( 'run' )
+			->with( $this->callback( static function ( $req ) use ( $issueKey ) {
+				$body = json_decode( $req['body'], true );
+				return $req['method'] === 'POST'
+					&& $req['url'] === 'https://jira.example.com/rest/servicedeskapi/request/' . $issueKey . '/comment'
+					&& $body['public'] === false;
+			} ) )
+			->willReturn( [ 'code' => 201, 'body' => '{}' ] );
+
+		Hooks::$httpClient = $httpClient;
+		$result = Hooks::sendInternalCommentToJira( self::CONFIG, $issueKey, $summary );
+
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * @covers ::sendInternalCommentToJira
+	 */
+	public function testSendInternalCommentToJiraReturnsFalseOnHttpError() {
+		$httpClient = $this->createMock( MultiHttpClient::class );
+		$httpClient->method( 'run' )->willReturn( [ 'code' => 404, 'body' => '' ] );
+
+		Hooks::$httpClient = $httpClient;
+		$result = Hooks::sendInternalCommentToJira( self::CONFIG, 'SD-1', 'Test summary' );
+
+		$this->assertFalse( $result );
 	}
 
 	/**
