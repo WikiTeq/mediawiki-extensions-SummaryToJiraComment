@@ -29,9 +29,9 @@ use WikiPage;
 class Hooks {
 
 	/**
-	 * @var MultiHttpClient
+	 * @var MultiHttpClient|null
 	 */
-	public static MultiHttpClient $httpClient;
+	public static ?MultiHttpClient $httpClient = null;
 
 	/**
 	 * @param WikiPage $wikiPage
@@ -49,22 +49,26 @@ class Hooks {
 		int $flags,
 		RevisionRecord $revisionRecord,
 		EditResult $editResult ): bool {
+		$title = $wikiPage->getTitle();
+		// Defense-in-depth: WikiPage::getTitle() is non-null on supported MW versions.
+		// @phan-suppress-next-line PhanRedundantCondition
+		if ( !$title ) {
+			return true;
+		}
 		$diffLink = self::getDiffLink( $wikiPage, $revisionRecord );
 		$config = [
 			MediaWikiServices::getInstance()->getMainConfig()->get( 'SummaryToJiraCommentInstance' ),
 			MediaWikiServices::getInstance()->getMainConfig()->get( 'SummaryToJiraCommentToken' ),
 			MediaWikiServices::getInstance()->getMainConfig()->get( 'SummaryToJiraCommentEmail' )
 		];
-		$title = $wikiPage->getTitle();
 		$issueKeys = self::getJiraIssueKeys( $summary );
 		$author = $user->getName();
 
-		$summary = '';
+		$commentBody = "\nTitle: " . $title->getFullText() .
+			"\nDiff: " . $diffLink .
+			"\nAuthor: " . $author;
 		foreach ( $issueKeys as $issueKey ) {
-			$summary .= "\nTitle: " . $title->getFullText();
-			$summary .= "\nDiff: " . $diffLink;
-			$summary .= "\nAuthor: " . $author;
-			self::sendToJira( $config, $issueKey, $summary );
+			self::sendToJira( $config, $issueKey, $commentBody );
 		}
 
 		return true;
@@ -91,10 +95,10 @@ class Hooks {
 	 * Send the comment to Jira using the Jira API
 	 * @param array $config
 	 * @param string $issueKey
-	 * @param string $summary
+	 * @param string $commentBody
 	 * @return bool
 	 */
-	public static function sendToJira( $config, $issueKey, $summary ): bool {
+	public static function sendToJira( $config, $issueKey, $commentBody ): bool {
 		[ $instance, $token, $email ] = $config;
 		$hash = base64_encode( $email . ':' . $token );
 
@@ -109,7 +113,7 @@ class Hooks {
 				'url' => 'https://' . $instance . '/rest/api/2/issue/' . $issueKey . '/comment',
 				'method' => 'POST',
 				'body' => json_encode( [
-					'body' => $summary
+					'body' => $commentBody
 				] )
 			] );
 		} catch ( \Exception $e ) {
@@ -138,7 +142,13 @@ class Hooks {
 	 * @return string
 	 */
 	private static function getDiffLink( WikiPage $wikiPage, RevisionRecord $revisionRecord ): string {
-		$diffLink = $wikiPage->getTitle()->getFullURL();
+		$title = $wikiPage->getTitle();
+		// Defense-in-depth: WikiPage::getTitle() is non-null on supported MW versions.
+		// @phan-suppress-next-line PhanRedundantCondition
+		if ( !$title ) {
+			return '';
+		}
+		$diffLink = $title->getFullURL();
 		$currentRevision = $revisionRecord->getId();
 		$oldRevision = $revisionRecord->getParentId();
 
