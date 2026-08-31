@@ -98,10 +98,10 @@ class Hooks {
 		[ $instance, $token, $email ] = $config;
 		$hash = base64_encode( $email . ':' . $token );
 
-		self::$httpClient = new MultiHttpClient( [ 'maxRetries' => 3 ] );
+		self::$httpClient ??= new MultiHttpClient( [ 'maxRetries' => 3 ] );
 
 		try {
-			self::$httpClient->run( [
+			$response = self::$httpClient->run( [
 				'headers' => [
 					'Authorization' => 'Basic ' . $hash,
 					'Content-Type' => 'application/json',
@@ -113,6 +113,18 @@ class Hooks {
 				] )
 			] );
 		} catch ( \Exception $e ) {
+			wfDebugLog( 'SummaryToJiraComment', __METHOD__ .
+				": exception posting comment to {$issueKey}: {$e->getMessage()}" );
+			return false;
+		}
+
+		// MultiHttpClient reports transport errors with a code of 0 and never
+		// throws for HTTP-level failures, so the status must be checked here.
+		$code = $response['code'] ?? 0;
+		if ( $code < 200 || $code >= 300 ) {
+			$error = $response['error'] ?? '';
+			wfDebugLog( 'SummaryToJiraComment', __METHOD__ .
+				": failed posting comment to {$issueKey} (HTTP {$code}): {$error}" );
 			return false;
 		}
 

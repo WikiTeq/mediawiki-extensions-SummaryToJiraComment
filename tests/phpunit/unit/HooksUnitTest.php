@@ -1,5 +1,22 @@
 <?php
 
+namespace MediaWiki\Extension\SummaryToJiraComment;
+
+/**
+ * wfDebugLog() is a MediaWiki core global that is not loaded under
+ * MediaWikiUnitTestCase. Hooks::sendToJira() calls it unqualified, so PHP
+ * resolves it against the Hooks class's own namespace (falling back to
+ * global only if no namespaced function exists) — the stub must live here,
+ * not in the Tests sub-namespace, or it will never be found and the
+ * failure-path tests below will fatal instead of asserting false.
+ * @param string $logGroup
+ * @param string $text
+ * @param string|bool $dest
+ * @param array $context
+ */
+function wfDebugLog( $logGroup, $text, $dest = 'all', array $context = [] ) {
+}
+
 namespace MediaWiki\Extension\SummaryToJiraComment\Tests;
 
 use MediaWiki\Extension\SummaryToJiraComment\Hooks;
@@ -31,6 +48,37 @@ class HooksUnitTest extends \MediaWikiUnitTestCase {
 		$result = Hooks::sendToJira( $config, $issueKey, $summary );
 
 		$this->assertTrue( $result );
+	}
+
+	/**
+	 * @dataProvider provideFailedResponses
+	 * @covers ::sendToJira
+	 */
+	public function testSendToJiraFailure( array $response ) {
+		$config = [
+			'https://jira.example.com',
+			'token',
+			'test@example.com'
+		];
+
+		$httpClient = $this->createMock( MultiHttpClient::class );
+		$httpClient->method( 'run' )->willReturn( $response );
+
+		Hooks::$httpClient = $httpClient;
+		$result = Hooks::sendToJira( $config, 'TEST-1', 'Test summary' );
+
+		$this->assertFalse( $result );
+	}
+
+	public static function provideFailedResponses(): array {
+		return [
+			'unauthorized' => [ [ 'code' => 401, 'error' => 'Unauthorized' ] ],
+			'server error' => [ [ 'code' => 500, 'error' => 'Internal Server Error' ] ],
+			// MultiHttpClient uses code 0 for transport-level failures (DNS,
+			// timeouts, ...) and never throws for HTTP errors.
+			'transport failure' => [ [ 'code' => 0, 'error' => '(curl error: 6)' ] ],
+			'missing code' => [ [ 'error' => '(curl error: no status set)' ] ],
+		];
 	}
 
 	/**
