@@ -1,17 +1,26 @@
 <?php
 
+namespace MediaWiki\Extension\SummaryToJiraComment;
+
+/**
+ * wfDebugLog() is a MediaWiki core global that is not loaded under
+ * MediaWikiUnitTestCase. Hooks::sendToJira() calls it unqualified, so PHP
+ * resolves it against the Hooks class's own namespace (falling back to
+ * global only if no namespaced function exists) — the stub must live here,
+ * not in the Tests sub-namespace, or it will never be found and the
+ * failure-path tests below will fatal instead of asserting false.
+ * @param string $logGroup
+ * @param string $text
+ * @param string|bool $dest
+ * @param array $context
+ */
+function wfDebugLog( $logGroup, $text, $dest = 'all', array $context = [] ) {
+}
+
 namespace MediaWiki\Extension\SummaryToJiraComment\Tests;
 
 use MediaWiki\Extension\SummaryToJiraComment\Hooks;
 use MultiHttpClient;
-
-/**
- * wfDebugLog() is a MediaWiki core global that is not loaded under
- * MediaWikiUnitTestCase; provide a namespace-local stub so production code
- * calling it remains testable.
- */
-function wfDebugLog( $logGroup, $text, $dest = 'all', array $context = [] ) {
-}
 
 /**
  * @coversDefaultClass \MediaWiki\Extension\SummaryToJiraComment\Hooks
