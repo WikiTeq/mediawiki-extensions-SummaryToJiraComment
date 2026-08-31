@@ -95,10 +95,10 @@ class Hooks {
 	 * Send the comment to Jira using the Jira API
 	 * @param array $config
 	 * @param string $issueKey
-	 * @param string $summary
+	 * @param string $commentBody
 	 * @return bool
 	 */
-	public static function sendToJira( $config, $issueKey, $summary ): bool {
+	public static function sendToJira( $config, $issueKey, $commentBody ): bool {
 		[ $instance, $token, $email ] = $config;
 		$hash = base64_encode( $email . ':' . $token );
 
@@ -113,7 +113,7 @@ class Hooks {
 				'url' => 'https://' . $instance . '/rest/api/2/issue/' . $issueKey . '/comment',
 				'method' => 'POST',
 				'body' => json_encode( [
-					'body' => $summary
+					'body' => $commentBody
 				] )
 			] );
 		} catch ( \Exception $e ) {
