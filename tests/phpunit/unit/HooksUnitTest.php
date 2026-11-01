@@ -27,12 +27,6 @@ use MultiHttpClient;
  */
 class HooksUnitTest extends \MediaWikiUnitTestCase {
 
-	// Per README.md, $wgSummaryToJiraCommentInstance is documented as a bare
-	// hostname (e.g. "<instance>.atlassian.net") — Hooks always prepends
-	// "https://" itself. Using a bare hostname here (unlike the pre-existing
-	// testSendToJira fixture, which uses a full URL and never asserts the
-	// constructed request URL) so the new tests below can assert exact URLs
-	// without tripping over a doubled "https://https://".
 	private const CONFIG = [
 		'jira.example.com',
 		'token',
