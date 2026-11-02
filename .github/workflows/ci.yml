@@ -21,13 +21,13 @@ jobs:
           php-version: '8.3'
           extensions: mbstring, intl
           coverage: none
-          tools: composer, phpcs, phplint
+          tools: composer:2.8.12, phpcs, phplint
       - name: Setup Extension
         uses: actions/checkout@v3
       - name: Setup Composer
         run: composer update
       - name: Lint
-        run: phplint -w --exclude=vendor
+        run: phplint lint --warning --exclude=vendor .
       - name: PHP Code Sniffer
         run: vendor/bin/phpcs -sp --standard=.phpcs.xml
 
@@ -46,7 +46,7 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: mbstring, intl, ast
           coverage: none
-          tools: composer
+          tools: composer:2.8.12
       - name: Setup MediaWiki
         uses: actions/checkout@v3
         with:
