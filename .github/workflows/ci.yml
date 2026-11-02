@@ -27,7 +27,7 @@ jobs:
       - name: Setup Composer
         run: composer update
       - name: Lint
-        run: phplint -w --exclude=vendor
+        run: phplint lint --warning --exclude=vendor .
       - name: PHP Code Sniffer
         run: vendor/bin/phpcs -sp --standard=.phpcs.xml
 
