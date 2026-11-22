@@ -27,7 +27,10 @@
 	},
 	"HookHandlers": {
 		"SummaryToJiraCommentHooks": {
-			"class": "MediaWiki\\Extension\\SummaryToJiraComment\\Hooks"
+			"class": "MediaWiki\\Extension\\SummaryToJiraComment\\Hooks",
+			"services": [
+				"HttpRequestFactory"
+			]
 		}
 	},
 	"Hooks": {

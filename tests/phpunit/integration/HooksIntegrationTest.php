@@ -3,6 +3,7 @@
 namespace MediaWiki\Extension\SummaryToJiraComment\Tests;
 
 use MediaWiki\Extension\SummaryToJiraComment\Hooks;
+use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Storage\EditResult;
@@ -31,12 +32,39 @@ class HooksIntegrationTest extends \MediaWikiIntegrationTestCase {
 	}
 
 	/**
+	 * Register a mock HttpRequestFactory service that supplies the given
+	 * client, and build the handler from the container-provided service.
+	 * @param MultiHttpClient $httpClient
+	 * @return Hooks
+	 */
+	private function newHooks( MultiHttpClient $httpClient ): Hooks {
+		$factory = $this->createMock( HttpRequestFactory::class );
+		$factory->method( 'createMultiClient' )->willReturn( $httpClient );
+		$this->setService( 'HttpRequestFactory', $factory );
+
+		return new Hooks( $this->getServiceContainer()->getHttpRequestFactory() );
+	}
+
+	/**
+	 * @coversNothing
+	 */
+	public function testHookHandlerIsConstructedWithDeclaredServices() {
+		$manifest = json_decode( file_get_contents( __DIR__ . '/../../../extension.json' ), true );
+		$spec = $manifest['HookHandlers']['SummaryToJiraCommentHooks'] ?? null;
+		$this->assertNotNull( $spec, 'HookHandlers entry is registered' );
+		$this->assertSame( [ 'HttpRequestFactory' ], $spec['services'] );
+
+		$handler = $this->getServiceContainer()->getObjectFactory()->createObject( $spec );
+		$this->assertInstanceOf( Hooks::class, $handler );
+	}
+
+	/**
 	 * @covers ::onPageSaveComplete
 	 */
 	public function testOnPageSaveComplete() {
 		$httpClient = $this->createMock( MultiHttpClient::class );
 		$httpClient->method( 'run' )->willReturn( [ 'code' => 200, 'body' => '{}' ] );
-		Hooks::$httpClient = $httpClient;
+		$hooks = $this->newHooks( $httpClient );
 
 		$wikiPage = $this->makeWikiPage();
 		$user = $this->createMock( User::class );
@@ -45,7 +73,7 @@ class HooksIntegrationTest extends \MediaWikiIntegrationTestCase {
 
 		$revisionRecord = $this->createMock( RevisionRecord::class );
 		$editResult = $this->createMock( EditResult::class );
-		$result = Hooks::onPageSaveComplete( $wikiPage, $user, $summary, $flags, $revisionRecord, $editResult );
+		$result = $hooks->onPageSaveComplete( $wikiPage, $user, $summary, $flags, $revisionRecord, $editResult );
 
 		$this->assertTrue( $result );
 	}
@@ -67,14 +95,14 @@ class HooksIntegrationTest extends \MediaWikiIntegrationTestCase {
 			}
 			$this->fail( 'Unexpected request to ' . $req['url'] . ' — SD issue must not receive a public comment.' );
 		} );
-		Hooks::$httpClient = $httpClient;
+		$hooks = $this->newHooks( $httpClient );
 
 		$wikiPage = $this->makeWikiPage();
 		$user = $this->createMock( User::class );
 		$revisionRecord = $this->createMock( RevisionRecord::class );
 		$editResult = $this->createMock( EditResult::class );
 
-		$result = Hooks::onPageSaveComplete(
+		$result = $hooks->onPageSaveComplete(
 			$wikiPage, $user, 'SD-1 test summary', 0, $revisionRecord, $editResult );
 
 		$this->assertTrue( $result );
@@ -97,14 +125,14 @@ class HooksIntegrationTest extends \MediaWikiIntegrationTestCase {
 			}
 			$this->fail( 'Unexpected request to ' . $req['url'] . ' — non-SD issue must not use servicedeskapi.' );
 		} );
-		Hooks::$httpClient = $httpClient;
+		$hooks = $this->newHooks( $httpClient );
 
 		$wikiPage = $this->makeWikiPage();
 		$user = $this->createMock( User::class );
 		$revisionRecord = $this->createMock( RevisionRecord::class );
 		$editResult = $this->createMock( EditResult::class );
 
-		$result = Hooks::onPageSaveComplete(
+		$result = $hooks->onPageSaveComplete(
 			$wikiPage, $user, 'PROJ-1 test summary', 0, $revisionRecord, $editResult );
 
 		$this->assertTrue( $result );
@@ -117,7 +145,7 @@ class HooksIntegrationTest extends \MediaWikiIntegrationTestCase {
 		$httpClient = $this->createMock( MultiHttpClient::class );
 		$httpClient->expects( $this->once() )->method( 'run' )
 			->willReturn( [ 'code' => 500, 'body' => '' ] );
-		Hooks::$httpClient = $httpClient;
+		$hooks = $this->newHooks( $httpClient );
 
 		$wikiPage = $this->makeWikiPage();
 		$user = $this->createMock( User::class );
@@ -126,7 +154,7 @@ class HooksIntegrationTest extends \MediaWikiIntegrationTestCase {
 
 		// expects( $this->once() ) above asserts only the detection GET
 		// happens — no comment POST follows when status is unknown.
-		$result = Hooks::onPageSaveComplete(
+		$result = $hooks->onPageSaveComplete(
 			$wikiPage, $user, 'PROJ-1 test summary', 0, $revisionRecord, $editResult );
 
 		$this->assertTrue( $result );

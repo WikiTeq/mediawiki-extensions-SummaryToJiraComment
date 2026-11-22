@@ -4,7 +4,7 @@ namespace MediaWiki\Extension\SummaryToJiraComment;
 
 /**
  * wfDebugLog() is a MediaWiki core global that is not loaded under
- * MediaWikiUnitTestCase. Hooks::sendToJira() calls it unqualified, so PHP
+ * MediaWikiUnitTestCase. $this->newHooks( $httpClient )->sendToJira() calls it unqualified, so PHP
  * resolves it against the Hooks class's own namespace (falling back to
  * global only if no namespaced function exists) — the stub must live here,
  * not in the Tests sub-namespace, or it will never be found and the
@@ -20,6 +20,7 @@ function wfDebugLog( $logGroup, $text, $dest = 'all', array $context = [] ) {
 namespace MediaWiki\Extension\SummaryToJiraComment\Tests;
 
 use MediaWiki\Extension\SummaryToJiraComment\Hooks;
+use MediaWiki\Http\HttpRequestFactory;
 use MultiHttpClient;
 
 /**
@@ -34,18 +35,52 @@ class HooksUnitTest extends \MediaWikiUnitTestCase {
 	];
 
 	/**
+	 * Build a handler whose HttpRequestFactory supplies the given client.
+	 * @param MultiHttpClient $httpClient
+	 * @return Hooks
+	 */
+	private function newHooks( MultiHttpClient $httpClient ): Hooks {
+		$factory = $this->createMock( HttpRequestFactory::class );
+		$factory->method( 'createMultiClient' )->willReturn( $httpClient );
+		return new Hooks( $factory );
+	}
+
+	/**
+	 * @covers ::__construct
 	 * @covers ::getHttpClient
 	 */
-	public function testGetHttpClientReusesInjectedMock() {
+	public function testGetHttpClientCreatesClientThroughFactory() {
 		$httpClient = $this->createMock( MultiHttpClient::class );
 		$httpClient->expects( $this->once() )->method( 'run' )
 			->willReturn( [ 'code' => 201, 'body' => '{}' ] );
 
-		Hooks::$httpClient = $httpClient;
-		// If getHttpClient() overwrote the mock, this call would hit the
-		// network instead of the mock and the expects(once) assertion above
-		// would fail.
-		Hooks::sendToJira( self::CONFIG, 'TEST-1', 'Test summary' );
+		$factory = $this->createMock( HttpRequestFactory::class );
+		$factory->expects( $this->once() )->method( 'createMultiClient' )
+			->with( [ 'maxRetries' => 3 ] )
+			->willReturn( $httpClient );
+
+		$result = ( new Hooks( $factory ) )->sendToJira( self::CONFIG, 'TEST-1', 'Test summary' );
+
+		$this->assertTrue( $result );
+	}
+
+	/**
+	 * @covers ::getHttpClient
+	 */
+	public function testGetHttpClientIsReusedAcrossRequests() {
+		$httpClient = $this->createMock( MultiHttpClient::class );
+		$httpClient->expects( $this->exactly( 2 ) )->method( 'run' )
+			->willReturn( [ 'code' => 201, 'body' => '{}' ] );
+
+		// The factory must be asked for a client only once, even though the
+		// handler sends two requests.
+		$factory = $this->createMock( HttpRequestFactory::class );
+		$factory->expects( $this->once() )->method( 'createMultiClient' )
+			->willReturn( $httpClient );
+
+		$hooks = new Hooks( $factory );
+		$this->assertTrue( $hooks->sendToJira( self::CONFIG, 'TEST-1', 'Test summary' ) );
+		$this->assertTrue( $hooks->sendInternalCommentToJira( self::CONFIG, 'SD-1', 'Test summary' ) );
 	}
 
 	/**
@@ -60,8 +95,7 @@ class HooksUnitTest extends \MediaWikiUnitTestCase {
 		$response = [ 'code' => 201, 'body' => [ 'foo' => 'bar' ] ];
 		$httpClient->method( 'run' )->willReturn( $response );
 
-		Hooks::$httpClient = $httpClient;
-		$result = Hooks::sendToJira( self::CONFIG, $issueKey, $summary );
+		$result = $this->newHooks( $httpClient )->sendToJira( self::CONFIG, $issueKey, $summary );
 
 		$this->assertTrue( $result );
 	}
@@ -80,8 +114,7 @@ class HooksUnitTest extends \MediaWikiUnitTestCase {
 		$httpClient = $this->createMock( MultiHttpClient::class );
 		$httpClient->method( 'run' )->willReturn( $response );
 
-		Hooks::$httpClient = $httpClient;
-		$result = Hooks::sendToJira( $config, 'TEST-1', 'Test summary' );
+		$result = $this->newHooks( $httpClient )->sendToJira( $config, 'TEST-1', 'Test summary' );
 
 		$this->assertFalse( $result );
 	}
@@ -104,8 +137,7 @@ class HooksUnitTest extends \MediaWikiUnitTestCase {
 		$httpClient = $this->createMock( MultiHttpClient::class );
 		$httpClient->method( 'run' )->willThrowException( new \RuntimeException( 'network error' ) );
 
-		Hooks::$httpClient = $httpClient;
-		$result = Hooks::sendToJira( self::CONFIG, 'TEST-1', 'Test summary' );
+		$result = $this->newHooks( $httpClient )->sendToJira( self::CONFIG, 'TEST-1', 'Test summary' );
 
 		$this->assertFalse( $result );
 	}
@@ -127,8 +159,7 @@ class HooksUnitTest extends \MediaWikiUnitTestCase {
 			} ) )
 			->willReturn( [ 'code' => 201, 'body' => '{}' ] );
 
-		Hooks::$httpClient = $httpClient;
-		$result = Hooks::sendInternalCommentToJira( self::CONFIG, $issueKey, $summary );
+		$result = $this->newHooks( $httpClient )->sendInternalCommentToJira( self::CONFIG, $issueKey, $summary );
 
 		$this->assertTrue( $result );
 	}
@@ -140,8 +171,7 @@ class HooksUnitTest extends \MediaWikiUnitTestCase {
 		$httpClient = $this->createMock( MultiHttpClient::class );
 		$httpClient->method( 'run' )->willReturn( [ 'code' => 404, 'body' => '' ] );
 
-		Hooks::$httpClient = $httpClient;
-		$result = Hooks::sendInternalCommentToJira( self::CONFIG, 'SD-1', 'Test summary' );
+		$result = $this->newHooks( $httpClient )->sendInternalCommentToJira( self::CONFIG, 'SD-1', 'Test summary' );
 
 		$this->assertFalse( $result );
 	}
