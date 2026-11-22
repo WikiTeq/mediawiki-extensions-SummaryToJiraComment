@@ -17,9 +17,11 @@ class HooksIntegrationTest extends \MediaWikiIntegrationTestCase {
 
 	protected function setUp(): void {
 		parent::setUp();
-		$this->overrideConfigValue( 'SummaryToJiraCommentInstance', 'jira.example.com' );
-		$this->overrideConfigValue( 'SummaryToJiraCommentToken', '0xCAFEBEEF' );
-		$this->overrideConfigValue( 'SummaryToJiraCommentEmail', 'test@example.com' );
+		$this->overrideConfigValues( [
+			'SummaryToJiraCommentInstance' => 'jira.example.com',
+			'SummaryToJiraCommentToken' => '0xCAFEBEEF',
+			'SummaryToJiraCommentEmail' => 'test@example.com',
+		] );
 	}
 
 	private function makeWikiPage(): WikiPage {
@@ -108,6 +110,50 @@ class HooksIntegrationTest extends \MediaWikiIntegrationTestCase {
 			$wikiPage, $user, 'PROJ-1 test summary', 0, $revisionRecord, $editResult );
 
 		$this->assertTrue( $result );
+	}
+
+	/**
+	 * @covers ::onPageSaveComplete
+	 */
+	public function testOnPageSaveCompleteUsesOverriddenConfigForRequests() {
+		$this->overrideConfigValues( [
+			'SummaryToJiraCommentInstance' => 'override-jira.test.invalid',
+			'SummaryToJiraCommentToken' => 'override-token-123',
+			'SummaryToJiraCommentEmail' => 'override-user@test.invalid',
+		] );
+		$expectedAuth = 'Basic ' . base64_encode( 'override-user@test.invalid:override-token-123' );
+
+		$requests = [];
+		$httpClient = $this->createMock( MultiHttpClient::class );
+		$httpClient->method( 'run' )->willReturnCallback( static function ( $req ) use ( &$requests ) {
+			$requests[] = $req;
+			if ( $req['method'] === 'GET' ) {
+				return [
+					'code' => 200,
+					'body' => json_encode( [ 'fields' => [ 'project' => [ 'projectTypeKey' => 'software' ] ] ] ),
+				];
+			}
+			return [ 'code' => 201, 'body' => '{}' ];
+		} );
+		Hooks::$httpClient = $httpClient;
+
+		$result = Hooks::onPageSaveComplete(
+			$this->makeWikiPage(),
+			$this->createMock( User::class ),
+			'PROJ-1 test summary',
+			0,
+			$this->createMock( RevisionRecord::class ),
+			$this->createMock( EditResult::class )
+		);
+
+		$this->assertTrue( $result );
+		$this->assertCount( 2, $requests, 'Expected the project-type lookup and one comment request' );
+		$this->assertSame( 'GET', $requests[0]['method'] );
+		$this->assertSame( 'POST', $requests[1]['method'] );
+		foreach ( $requests as $req ) {
+			$this->assertStringStartsWith( 'https://override-jira.test.invalid/rest/', $req['url'] );
+			$this->assertSame( $expectedAuth, $req['headers']['Authorization'] );
+		}
 	}
 
 	/**
